@@ -253,6 +253,7 @@ if is_torch_available():
         RobertaForMaskedLM,
         RobertaModel,
         RobertaForSequenceClassification,
+        RobertaForMultitaskSequenceClassification,
         RobertaForMultipleChoice,
         RobertaForTokenClassification,
         RobertaForQuestionAnswering,
