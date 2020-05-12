@@ -42,6 +42,7 @@ class ModelArguments:
         default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
     )
 
+
 class SarcArgDataset(Dataset):
     def __init__(self, data, tokenizer):
         self.data = data
@@ -66,7 +67,6 @@ class SarcArgDataset(Dataset):
 
         for i, example in enumerate(self.data[:5]):
             logger.info("*** Example ***")
-            # logger.info("guid: %s" % (example.guid))
             logger.info("features: %s" % self.features[i])
 
     def __len__(self):
@@ -74,26 +74,17 @@ class SarcArgDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.features[idx]
-        # data_pt = self.data[idx]
 
-        # s1, s2, sarclab, arglab = data_pt.split('\t')
-        # s1, s2, sarclab, arglab = s1.strip('\t').strip('\n'), s2.strip('\t').strip('\n'), sarclab.strip('\t').strip('\n'), arglab.strip('\t').strip('\n')
-        # sarclab = label_dict[sarclab]
-        # arglab = label_dict[arglab]
-
-        # input_ids = self.tokenizer.encode(s1, s2, add_special_tokens=True)
-
-        # return input_ids, sarclab, arglab
 
 def _use_cuda():
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
     torch.backends.cudnn.benchmark = True
 
+
 def _load_data(dtype='train.txt'):
     with open(os.path.join(STORED_DATA_PATH, dtype)) as f:
         data = f.readlines()
-
     return data
 
 
@@ -105,6 +96,9 @@ def main():
     'roberta-base',
     num_labels=2,
     )
+
+    # Set seed
+    set_seed(training_args.seed)
 
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     model = model_select.from_pretrained('roberta-base', config=config)
@@ -119,10 +113,9 @@ def main():
         args=training_args,
         train_dataset=train_set,
         eval_dataset=dev_set,
-        # compute_metrics=compute_metrics,
     )
 
-     # Training
+    # Training
     if training_args.do_train:
         trainer.train(
             model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
@@ -139,7 +132,6 @@ def main():
     if training_args.do_eval and training_args.local_rank in [-1, 0]:
         logger.info("*** Evaluate ***")
 
-        # Loop to handle MNLI double evaluation (matched, mis-matched)
         eval_datasets = [eval_dataset]
         for eval_dataset in eval_datasets:
             result = trainer.evaluate(eval_dataset=eval_dataset)
@@ -157,13 +149,18 @@ def main():
 
     return results
 
+
+def test_single_run():
+    # testing a single pair
+
+    input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", "dog is very cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
+    labels_t1 = torch.tensor([1]).unsqueeze(0)  # Batch size 1
+    labels_t2 = torch.tensor([1]).unsqueeze(0)  # Batch size 1
+    outputs = model(input_ids, labels_t1=labels_t1, labels_t2=labels_t2)
+    loss, logits1, logits2 = outputs[:3]
+
+    print(outputs)
+
+
 if __name__ == "__main__":
     main()
-
-# input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", "dog is very cute", add_special_tokens=True)).unsqueeze(0)  # Batch size 1
-# labels_t1 = torch.tensor([1]).unsqueeze(0)  # Batch size 1
-# labels_t2 = torch.tensor([1]).unsqueeze(0)  # Batch size 1
-# outputs = model(input_ids, labels_t1=labels_t1, labels_t2=labels_t2)
-# loss, logits1, logits2 = outputs[:3]
-
-# print(outputs)
